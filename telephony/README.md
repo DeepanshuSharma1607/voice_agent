@@ -2,7 +2,7 @@
 
 A general-purpose voice assistant on a phone number: Exotel carries the call,
 Gemini Live does the listening, thinking and speaking.
-
+live at : https://voice-agent-4ney.onrender.com
 ## Layout
 
 ```
