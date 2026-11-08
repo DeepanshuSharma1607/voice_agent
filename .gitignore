@@ -1,0 +1,104 @@
+
+# ===============================
+# Python
+# ===============================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# ===============================
+# Virtual Environments
+# ===============================
+.venv/
+venv/
+env/
+.venv-ec2/
+ENV/
+
+# ===============================
+# Environment Variables / Secrets
+# ===============================
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+secrets/
+credentials.json
+service-account*.json
+
+# ===============================
+# Jupyter Notebook
+# ===============================
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# ===============================
+# Datasets & Generated Data
+# ===============================
+data/
+datasets/
+voices/
+*.csv
+*.parquet
+*.feather
+*.sqlite
+*.db
+
+# ===============================
+# ML Models & Checkpoints
+# ===============================
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+*.onnx
+*.pkl
+*.joblib
+*.safetensors
+
+# ===============================
+# Logs & Monitoring
+# ===============================
+*.log
+logs/
+output/
+monitoring/data/
+prometheus_data/
+grafana_data/
+
+# ===============================
+# Temporary Files
+# ===============================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===============================
+# IDEs
+# ===============================
+.vscode/
+.idea/
+
+# ===============================
+# Node (if frontend added)
+# ===============================
+node_modules/
+dist/
+
+# ===============================
+# Docker
+# ===============================
+docker-compose.override.yml
