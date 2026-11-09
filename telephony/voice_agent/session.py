@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
+from datetime import datetime, timezone
 
 from fastapi import WebSocket, WebSocketDisconnect
 from google import genai
@@ -22,6 +23,7 @@ from .config import Settings
 from .hangup import is_explicit_hangup_request
 from .logging_setup import call_logger
 from .metrics import LatencyTracker
+from .transcripts import save_call_transcript
 
 
 class CallSession:
@@ -41,6 +43,9 @@ class CallSession:
 
         self.start: exotel.StartInfo | None = None
         self.session = None  # Gemini live session
+        self.call_started_at: datetime | None = None
+        self.transcript_entries: list[tuple[str, str]] = []
+        self.agent_turn_text = ""
 
         # Hang-up / goodbye state
         self.hangup_event = asyncio.Event()
@@ -129,6 +134,7 @@ class CallSession:
                 self.log.info("Exotel connection established.")
             elif event == "start":
                 self.start = exotel.parse_start(message)
+                self.call_started_at = datetime.now(timezone.utc)
                 self.log.extra["call"] = (self.start.call_sid or self.start.stream_sid)[:12]
                 self.log.info(
                     "Call started. stream_sid=%s audio=%s",
@@ -166,6 +172,8 @@ class CallSession:
         except Exception as exc:
             self.log.warning("Gemini session close error: %r", exc)
 
+        self._save_transcript()
+
         # Closing the WebSocket makes Exotel proceed to its Next Applet
         # (set that applet to Hangup).
         if self.websocket.application_state == WebSocketState.CONNECTED:
@@ -179,6 +187,38 @@ class CallSession:
                 self.log.warning("WebSocket close error: %r", exc)
 
         self.log.info("Session closed.")
+
+    def _capture_completed_turn(self) -> None:
+        """Move the current caller/agent transcription fragments into history."""
+        caller_text = " ".join(self.caller_turn_text.split())
+        agent_text = " ".join(self.agent_turn_text.split())
+        if caller_text:
+            self.transcript_entries.append(("Caller", caller_text))
+        if agent_text:
+            self.transcript_entries.append(("Agent", agent_text))
+        self.caller_turn_text = ""
+        self.agent_turn_text = ""
+
+    def _save_transcript(self) -> None:
+        """Persist the transcript even when a caller disconnects mid-turn."""
+        if self.start is None:
+            return
+
+        # Preserve any final partial transcription that arrived before disconnect.
+        self._capture_completed_turn()
+        try:
+            path = save_call_transcript(
+                call_sid=self.start.call_sid,
+                stream_sid=self.start.stream_sid,
+                started_at=self.call_started_at,
+                ended_at=datetime.now(timezone.utc),
+                entries=self.transcript_entries,
+                directory=self.settings.transcript_dir,
+            )
+        except OSError as exc:
+            self.log.exception("Could not save call transcript: %s", exc)
+            return
+        self.log.info("Call transcript saved: %s", path)
 
     # ------------------------------------------------------------------
     # Hang-up helpers
@@ -423,7 +463,8 @@ class CallSession:
             # ---- Gemini's own speech transcript ----
             output_text = server_content.output_transcription
             if output_text and output_text.text:
-                self.log.info("Agent: %s", output_text.text)
+                self.agent_turn_text += output_text.text
+                self.log.info("Agent: %s", output_text.text.strip())
 
             # ---- Barge-in: caller spoke over the AI ----
             if server_content.interrupted:
@@ -472,7 +513,7 @@ class CallSession:
                     await sender.send(tail)
                 await sender.flush()
 
-                self.caller_turn_text = ""
+                self._capture_completed_turn()
 
                 if self._greeting_active:
                     self._greeting_active = False

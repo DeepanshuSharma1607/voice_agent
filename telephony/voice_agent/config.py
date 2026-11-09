@@ -40,6 +40,7 @@ class Settings:
     # Diagnostics
     raw_responses_to_log: int = 5
     log_level: str = "INFO"
+    transcript_dir: str = "call_transcripts"
 
 
 def find_env_file(start: Path | None = None) -> Path | None:
@@ -96,4 +97,5 @@ def get_settings() -> Settings:
         start_event_timeout_seconds=_env_number("START_EVENT_TIMEOUT_SECONDS", 30.0, float),
         raw_responses_to_log=_env_number("RAW_RESPONSES_TO_LOG", 5, int),
         log_level=_env_str("LOG_LEVEL", "INFO").upper(),
+        transcript_dir=_env_str("CALL_TRANSCRIPT_DIR", "call_transcripts"),
     )

@@ -14,14 +14,16 @@ from voice_agent.session import CallSession
 def _audio_response():
     pcm = (np.sin(np.linspace(0, 200, 4800)) * 6000).astype("<i2").tobytes()  # 0.2 s @ 24 kHz
     part = SimpleNamespace(inline_data=SimpleNamespace(data=pcm), text=None)
-    return _server_content(model_turn=SimpleNamespace(parts=[part]))
+    return _server_content(
+        model_turn=SimpleNamespace(parts=[part]), output_text="Hello there, how can I help?"
+    )
 
 
-def _server_content(model_turn=None, turn_complete=False):
+def _server_content(model_turn=None, turn_complete=False, output_text=None):
     return SimpleNamespace(
         server_content=SimpleNamespace(
             input_transcription=None,
-            output_transcription=None,
+            output_transcription=(SimpleNamespace(text=output_text) if output_text else None),
             interrupted=False,
             model_turn=model_turn,
             turn_complete=turn_complete,
@@ -58,7 +60,7 @@ class FakeSession:
             await asyncio.sleep(0.05)
 
 
-def test_greeting_then_end_call_hangs_up(monkeypatch):
+def test_greeting_then_end_call_hangs_up(monkeypatch, tmp_path):
     fake = FakeSession()
 
     async def fake_connect(stack, client, settings):
@@ -72,6 +74,7 @@ def test_greeting_then_end_call_hangs_up(monkeypatch):
         exotel_ws_url="wss://x",
         playback_margin_seconds=0.05,
         goodbye_timeout_seconds=5.0,
+        transcript_dir=str(tmp_path),
     )
     app = FastAPI()
 
@@ -98,3 +101,8 @@ def test_greeting_then_end_call_hangs_up(monkeypatch):
     assert fake.sent_text == [settings.greeting_trigger]   # greeting was sent from code
     assert any(e["event"] == "media" for e in events)      # greeting audio reached Exotel
     assert fake.tool_responses                              # end_call was answered
+    transcript = tmp_path / "call_no_CALL123.txt"
+    assert transcript.exists()                             # each started call is persisted
+    content = transcript.read_text(encoding="utf-8")
+    assert "Call No: CALL123" in content
+    assert "Agent:\nHello there, how can I help?" in content

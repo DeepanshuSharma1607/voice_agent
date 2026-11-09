@@ -1,42 +1,12 @@
-# ---- Secrets (never commit) ----
+# Secrets and local configuration
 .env
-.env.*
-!.env.example
-*.pem
-*.key
 
-# ---- Python ----
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-build/
-dist/
-
-# ---- Virtual environments ----
+# Python environments and caches
 .venv/
 venv/
-env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
-# ---- Node / web app ----
-node_modules/
-.next/
-.vite/
-
-# ---- Editors and OS ----
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ---- Logs and local data ----
-*.log
-logs/
-ngrok.yml
-*.sqlite3
-*.db
+# Per-call transcripts can contain personal information
+call_transcripts/
